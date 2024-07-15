@@ -44,9 +44,10 @@ def get_stock_data(stock_file):
 
 
 def switch_k_backend_device():
-    """ Switches `keras` backend to use MPS (Metal Performance Shaders) if available.
+    """ Switches `keras` backend to use MPS (Metal Performance Shaders) if available,
+    or CUDA if MPS is not available.
 
-    Optimized computation on Apple silicon using MPS.
+    Optimized computation on Apple silicon using MPS or NVIDIA GPUs using CUDA.
     """
     if K.backend() == "tensorflow":
         logging.debug("Checking for MPS support")
@@ -63,4 +64,21 @@ def switch_k_backend_device():
                 # Invalid device or cannot modify virtual devices once initialized
                 logging.error(f"Error while setting MPS configuration: {e}")
         else:
-            logging.warning("MPS support not found, using default backend")
+            logging.debug("MPS support not found, checking for CUDA devices")
+            if tf.config.experimental.list_physical_devices('GPU'):
+                logging.debug("CUDA device found, switching to CUDA")
+                os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Use the first CUDA device
+                physical_devices = tf.config.experimental.list_physical_devices('GPU')
+                try:
+                    # Set memory growth for CUDA devices
+                    for device in physical_devices:
+                        tf.config.experimental.set_memory_growth(device, True)
+                    # Optionally, you can limit GPU memory usage
+                    # tf.config.experimental.set_virtual_device_configuration(
+                    #     physical_devices[0],
+                    #     [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=1024)]
+                    # )
+                except Exception as e:
+                    logging.error(f"Error while setting CUDA configuration: {e}")
+            else:
+                logging.warning("Neither MPS nor CUDA support found, using default CPU backend")
