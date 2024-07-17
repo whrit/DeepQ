@@ -15,7 +15,7 @@ start_date = end_date - timedelta(days=365*10)
 # Fetch the data
 data = yf.download(ticker_symbol, start=start_date, end=end_date)
 # Ensure last_year_date is timezone-aware
-last_year_date = end_date - timedelta(days=365)
+last_year_date = end_date - timedelta(days=365*2)
 
 
 # Split the data into the last year and the previous 9 years

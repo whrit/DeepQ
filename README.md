@@ -43,7 +43,7 @@ pip3 install -r requirements.txt
 Now you can open up a terminal and start training the agent:
 
 ```bash
-python train.py data/SPY_9_years.csv data/SPY_last_year.csv --strategy t-dqn
+python train.py data/SPY_9_years.csv data/SPY_last_year.csv --strategy=t-dqn --episode-count=10
 ```
 
 Once you're done training, run the evaluation script and let the agent make trading decisions:
