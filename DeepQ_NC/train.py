@@ -1,5 +1,3 @@
-# train.py
-
 """
 Script for training Stock Trading Bot.
 
@@ -27,7 +25,6 @@ Options:
 
 import logging
 import coloredlogs
-import os
 
 from docopt import docopt
 
@@ -38,42 +35,31 @@ from trading_bot.utils import (
     format_currency,
     format_position,
     show_train_result,
-    switch_tf_backend_device
+    switch_k_backend_device
 )
 
 
 def main(train_stock, val_stock, window_size, batch_size, ep_count,
          strategy="t-dqn", model_name="model_debug", pretrained=False,
-         debug=False, checkpoint_interval=5):
+         debug=False):
+    """ Trains the stock trading bot using Deep Q-Learning.
+    Please see https://arxiv.org/abs/1312.5602 for more details.
+
+    Args: [python train.py --help]
+    """
+    agent = Agent(window_size, strategy=strategy, pretrained=pretrained, model_name=model_name)
     
-    # Check for existing checkpoints
-    checkpoints = [f for f in os.listdir("models") if f.startswith(f"{model_name}_") and f.endswith(".keras")]
-    start_episode = 1
-
-    if checkpoints and not pretrained:
-        def get_episode_number(filename):
-            parts = filename.split('_')
-            return float(parts[-1].split('.')[0])  # Get the last part before .keras
-
-        latest_checkpoint = max(checkpoints, key=get_episode_number)
-        start_episode = int(get_episode_number(latest_checkpoint))
-        agent = Agent(window_size, strategy=strategy, pretrained=True, model_name=f"{model_name}_{start_episode:.2f}")
-        print(f"Resuming from checkpoint: {latest_checkpoint}")
-    else:
-        agent = Agent(window_size, strategy=strategy, pretrained=pretrained, model_name=model_name)
-
-
     train_data = get_stock_data(train_stock)
     val_data = get_stock_data(val_stock)
 
     initial_offset = val_data[1] - val_data[0]
 
-    for episode in range(start_episode, ep_count + 1):
+    for episode in range(1, ep_count + 1):
         train_result = train_model(agent, episode, train_data, ep_count=ep_count,
-                                   batch_size=batch_size, window_size=window_size,
-                                   checkpoint_interval=checkpoint_interval)
+                                   batch_size=batch_size, window_size=window_size)
         val_result, _ = evaluate_model(agent, val_data, window_size, debug)
         show_train_result(train_result, val_result, initial_offset)
+
 
 if __name__ == "__main__":
     args = docopt(__doc__)
@@ -89,11 +75,11 @@ if __name__ == "__main__":
     debug = args["--debug"]
 
     coloredlogs.install(level="DEBUG")
-    switch_tf_backend_device()
+    switch_k_backend_device()
 
     try:
         main(train_stock, val_stock, window_size, batch_size,
              ep_count, strategy=strategy, model_name=model_name, 
-             pretrained=pretrained, debug=debug, checkpoint_interval=5)
+             pretrained=pretrained, debug=debug)
     except KeyboardInterrupt:
         print("Aborted!")
