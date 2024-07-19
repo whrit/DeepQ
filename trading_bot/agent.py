@@ -60,7 +60,7 @@ class Agent:
             state = state.flatten()
         if isinstance(next_state, np.ndarray) and next_state.ndim == 2:
             next_state = next_state.flatten()
-        self.memory.append((state, action, reward, next_state, done))
+        self.memory.append((state, int(action), reward, next_state, done))
 
     @tf.function
     def act(self, state, is_eval=False):
@@ -68,15 +68,25 @@ class Agent:
         if state.shape.ndims == 1:
             state = tf.expand_dims(state, 0)  # Add batch dimension if needed
         
-        if not is_eval and tf.random.uniform(()) <= self.epsilon:
-            return tf.random.uniform((), minval=0, maxval=self.action_size, dtype=tf.int32)
+        def random_action():
+            return tf.cast(tf.random.uniform((), minval=0, maxval=self.action_size, dtype=tf.int32), tf.int64)
         
+        def model_action():
+            action_probs = self.model(state)
+            return tf.cast(tf.argmax(action_probs[0]), tf.int64)
+        
+        action = tf.cond(
+            tf.logical_and(tf.logical_not(is_eval), tf.random.uniform(()) <= self.epsilon),
+            random_action,
+            model_action
+        )
+        
+        # Update first_iter outside of tf.function
         if self.first_iter:
             self.first_iter = False
-            return tf.constant(1, dtype=tf.int32)
-
-        action_probs = self.model(state)
-        return tf.argmax(action_probs[0])
+            return tf.constant(1, dtype=tf.int64)
+        
+        return action
 
     def train_experience_replay(self, batch_size):
         mini_batch = random.sample(self.memory, batch_size)

@@ -25,6 +25,7 @@ def train_model(agent, episode, data, ep_count=100, batch_size=32, window_size=1
         next_state = tf_get_state(data_tf, t + 1, window_size)
         
         action = agent.act(tf.expand_dims(state, 0))
+        action = int(action.numpy())  # Convert to Python int
         
         if action == 1:  # BUY
             agent.inventory.append(data[t])
@@ -65,9 +66,10 @@ def evaluate_model(agent, data, window_size, debug):
     
     for t in range(data_length):
         reward = 0.0
-        next_state = tf_get_state(data_tf, t + 1, window_size)  # Remove the +1 here as well
+        next_state = tf_get_state(data_tf, t + 1, window_size)
         
         action = agent.act(tf.expand_dims(state, 0), is_eval=True)
+        action = int(action.numpy())  # Convert to Python int
         
         if action == 1:  # BUY
             agent.inventory.append(data[t])
